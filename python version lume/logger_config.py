@@ -16,12 +16,18 @@ def get_log_path():
 
     return os.path.join(lume_dir, 'app.log')
 
+class _LineBreakEscapingFormatter(logging.Formatter):
+
+    def format(self, record):
+        message = super().format(record)
+        return message.replace("\r", "\\r").replace("\n", "\\n")
+
 def setup_logger():
 
     logger = logging.getLogger("Lume")
     logger.setLevel(logging.INFO)
 
-    formatter = logging.Formatter(
+    formatter = _LineBreakEscapingFormatter(
         '%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
