@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 )
 
 func SanitizeFolderName(name string) string {
@@ -49,8 +50,8 @@ func SanitizeFolderName(name string) string {
 		}
 	}
 
-	if len(name) > 100 {
-		return name[:100]
+	if utf8.RuneCountInString(name) > 100 {
+		return string([]rune(name)[:100])
 	}
 
 	return name
@@ -132,7 +133,7 @@ func ArchiveFileWithOptions(ctx context.Context, info metadata.FileInfo, targetB
 	}
 
 	finalPath = filepath.Join(targetDir, filename)
-	
+
 	isTargetConflict := false
 	if _, err := os.Lstat(finalPath); !os.IsNotExist(err) {
 		isTargetConflict = true
@@ -230,21 +231,29 @@ func ResolveConflict(path string, state *State) (string, error) {
 }
 
 func AtomicCopy(ctx context.Context, src, dst string) error {
-	sh, err := CopyFile(ctx, src, dst)
+	tmp := dst + ".lume-part"
+	os.Remove(tmp)
+
+	sh, err := CopyFile(ctx, src, tmp)
 	if err != nil {
-		os.Remove(dst)
+		os.Remove(tmp)
 		return fmt.Errorf("copy failed: %w", err)
 	}
 
-	th, err := metadata.GetFileHash(dst)
+	th, err := metadata.GetFileHash(tmp)
 	if err != nil {
-		os.Remove(dst)
+		os.Remove(tmp)
 		return fmt.Errorf("post-copy hash failed: %w", err)
 	}
 
 	if sh != th {
-		os.Remove(dst)
+		os.Remove(tmp)
 		return fmt.Errorf("integrity failed: hash mismatch during copy")
+	}
+
+	if err := os.Rename(tmp, dst); err != nil {
+		os.Remove(tmp)
+		return fmt.Errorf("could not publish copied file: %w", err)
 	}
 
 	return nil
@@ -268,8 +277,11 @@ func CopyFile(ctx context.Context, src, dst string) (string, error) {
 	}
 
 	var success bool
+	closed := false
 	defer func() {
-		out.Close()
+		if !closed {
+			out.Close()
+		}
 		if !success {
 			os.Remove(dst)
 		}
@@ -307,6 +319,7 @@ func CopyFile(ctx context.Context, src, dst string) (string, error) {
 	if err := out.Close(); err != nil {
 		return "", fmt.Errorf("dosya kapatılamadı: %w", err)
 	}
+	closed = true
 	success = true
 
 	if err := os.Chmod(dst, srcInfo.Mode()); err != nil {

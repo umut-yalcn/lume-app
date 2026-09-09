@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestSanitizeFolderName(t *testing.T) {
@@ -263,5 +264,69 @@ func TestArchiveFile_DuplicateSkipped(t *testing.T) {
 
 	if err := ArchiveFile(context.Background(), info2, dstDir); err != nil {
 		t.Fatalf("Kopya ArchiveFile hata döndü: %v", err)
+	}
+}
+
+func TestSanitizeFolderName_LongUnicodeStaysValid(t *testing.T) {
+	cases := map[string]string{
+		"3 baytlık karakter": strings.Repeat("あ", 60),
+		"4 baytlık karakter": strings.Repeat("😀", 40),
+		"karışık":            "Ç" + strings.Repeat("あ", 60),
+		"türkçe":             strings.Repeat("ğ", 80),
+	}
+	for name, in := range cases {
+		got := SanitizeFolderName(in)
+		if !utf8.ValidString(got) {
+			t.Errorf("SanitizeFolderName(%s) geçersiz UTF-8 üretti: %q", name, got)
+		}
+		if utf8.RuneCountInString(got) > 100 {
+			t.Errorf("SanitizeFolderName(%s) 100 karakterden uzun: %d", name, utf8.RuneCountInString(got))
+		}
+	}
+}
+
+func TestAtomicCopy_LeavesNoPartialOnSuccess(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "kaynak.jpg")
+	dst := filepath.Join(dir, "hedef.jpg")
+	if err := os.WriteFile(src, []byte("atomik kopya"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := AtomicCopy(context.Background(), src, dst); err != nil {
+		t.Fatalf("AtomicCopy: %v", err)
+	}
+
+	if _, err := os.Stat(dst + ".lume-part"); !os.IsNotExist(err) {
+		t.Error("başarılı kopyadan sonra .lume-part dosyası kalmamalı")
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "atomik kopya" {
+		t.Errorf("hedef içeriği bozuldu: %q", string(got))
+	}
+}
+
+func TestAtomicCopy_CancelledContextLeavesNothing(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "kaynak.jpg")
+	dst := filepath.Join(dir, "hedef.jpg")
+	if err := os.WriteFile(src, []byte("iptal"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := AtomicCopy(ctx, src, dst); err == nil {
+		t.Fatal("iptal edilmiş bağlamda AtomicCopy hata döndürmeliydi")
+	}
+	if _, err := os.Stat(dst); !os.IsNotExist(err) {
+		t.Error("iptal sonrası hedef dosya oluşmamalı")
+	}
+	if _, err := os.Stat(dst + ".lume-part"); !os.IsNotExist(err) {
+		t.Error("iptal sonrası .lume-part dosyası kalmamalı")
 	}
 }

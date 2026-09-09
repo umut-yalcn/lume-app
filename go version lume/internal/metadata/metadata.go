@@ -17,16 +17,21 @@ import (
 )
 
 var SupportedExtensions = map[string]bool{
-	".jpg":  true,
-	".jpeg": true,
-	".png":  true,
-	".webp": true,
-	".heic": true,
-	".tiff": true,
-	".mp4":  true,
-	".mov":  true,
-	".avi":  true,
+	".jpg": true, ".jpeg": true, ".png": true, ".webp": true,
+	".heic": true, ".tiff": true, ".gif": true, ".bmp": true,
+	".dng": true, ".cr2": true, ".nef": true, ".arw": true, ".orf": true,
+	".mp4": true, ".mov": true, ".avi": true, ".mkv": true,
+	".m4v": true, ".flv": true, ".wmv": true, ".mpg": true, ".mpeg": true,
+	".3gp": true,
 }
+
+var exifCapableExtensions = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".webp": true,
+	".heic": true, ".tiff": true, ".gif": true, ".bmp": true,
+	".dng": true, ".cr2": true, ".nef": true, ".arw": true, ".orf": true,
+}
+
+const maxExifScanSize = 250 * 1024 * 1024
 
 type FileInfo struct {
 	Path     string
@@ -77,8 +82,7 @@ func GetFileInfo(path string) (FileInfo, error) {
 		Source:   DetectSource(filepath.Base(path)),
 	}
 
-	isImage := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".heic": true, ".tiff": true}
-	if isImage[ext] && stat.Size() <= 250*1024*1024 {
+	if exifCapableExtensions[ext] && stat.Size() <= maxExifScanSize {
 
 		func() {
 			defer func() {

@@ -21,8 +21,11 @@ import (
 	"github.com/lxn/win"
 )
 
+var AppVersion = "2.1"
+
+var appTitle = "Lume v" + AppVersion
+
 const (
-	AppVersion       = "2.1"
 	MaxFilesLimit    = 10000
 	MaxErrorsDisplay = 10
 )
@@ -113,11 +116,12 @@ type LumeUI struct {
 	cancelFunc   context.CancelFunc
 	mutex        sync.Mutex
 	isProcessing bool
+	isScanning   bool
 }
 
 var i18n = map[string]map[string]string{
 	"tr": {
-		"title":       "Lume v2.1",
+		"title":       appTitle,
 		"theme_light": "Aydınlık Mod", "theme_dark": "Karanlık Mod",
 		"lang_switch": "EN", "archive_ops": "Arşiv İşlemleri",
 		"target_folder": "Hedef Klasör:", "not_selected": "Seçilmedi",
@@ -141,6 +145,7 @@ var i18n = map[string]map[string]string{
 		"drag_target_ask":    "Sürüklediğiniz klasörü HEDEF klasör olarak ayarlamak ister misiniz?\n\nEvet: Hedef Klasör Yap\nHayır: Kaynak Klasör Olarak Tara",
 		"warn_system_dir":    "Korumalı sistem dizini hedef olarak seçilemez.",
 		"warn_write":         "Seçilen klasöre yazma izniniz yok: %v",
+		"scanning":           "Dosyalar taranıyor...",
 		"status_ready":       "Hazır",
 		"status_would_ok":    "Kopyalanacak (Test)",
 		"status_would_skip":  "Atlanacak (Kopya)",
@@ -149,7 +154,7 @@ var i18n = map[string]map[string]string{
 		"status_err":         "Hata",
 	},
 	"en": {
-		"title":       "Lume v2.1",
+		"title":       appTitle,
 		"theme_light": "Light Mode", "theme_dark": "Dark Mode",
 		"lang_switch": "TR", "archive_ops": "Archive Operations",
 		"target_folder": "Target Folder:", "not_selected": "Not Selected",
@@ -174,6 +179,7 @@ var i18n = map[string]map[string]string{
 		"drag_target_ask":    "Do you want to set the dragged folder as the TARGET folder?\n\nYes: Set as Target Folder\nNo: Scan as Source Folder",
 		"warn_system_dir":    "Protected system directory cannot be set as target.",
 		"warn_write":         "Cannot write to selected folder: %v",
+		"scanning":           "Scanning files...",
 		"status_ready":       "Ready",
 		"status_would_ok":    "Would Copy (Test)",
 		"status_would_skip":  "Would Skip (Dup)",
@@ -339,8 +345,12 @@ func (ui *LumeUI) GetStatusText() string {
 }
 
 func (ui *LumeUI) ToggleTheme() {
+	ui.mutex.Lock()
 	ui.Config.DarkMode = !ui.Config.DarkMode
-	config.SaveConfig(ui.Config)
+	snapshot := ui.Config
+	ui.mutex.Unlock()
+
+	config.SaveConfig(snapshot)
 	ui.ThemeBtn.SetText(ui.GetThemeBtnText())
 	ui.ApplyTheme()
 }
@@ -351,12 +361,16 @@ func (ui *LumeUI) GetThemeBtnText() string {
 	return ui.T("theme_dark")
 }
 func (ui *LumeUI) ToggleLanguage() {
+	ui.mutex.Lock()
 	if ui.Config.Language == "tr" {
 		ui.Config.Language = "en"
 	} else {
 		ui.Config.Language = "tr"
 	}
-	config.SaveConfig(ui.Config)
+	snapshot := ui.Config
+	ui.mutex.Unlock()
+
+	config.SaveConfig(snapshot)
 	ui.RefreshLocalization()
 }
 func (ui *LumeUI) RefreshLocalization() {
@@ -528,14 +542,115 @@ func (ui *LumeUI) SelectFolder() {
 	}
 }
 func (ui *LumeUI) SaveConfigState() {
+	ui.mutex.Lock()
 	ui.Config.DryRun = ui.DryRunCheck.Checked()
 	ui.Config.Rename = ui.RenameCheck.Checked()
-	config.SaveConfig(ui.Config)
+	snapshot := ui.Config
+	ui.mutex.Unlock()
+
+	config.SaveConfig(snapshot)
+}
+
+type scanResult struct {
+	files    []metadata.FileInfo
+	limitHit bool
+}
+
+func normalizePath(p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		abs = p
+	}
+	return strings.ToLower(filepath.Clean(abs))
+}
+
+// scanDroppedPaths, surukle-birak ile gelen yollari UI thread'i disinda tarar.
+// EXIF okumasi burada yapildigi icin pencere buyuk klasorlerde donmaz.
+func scanDroppedPaths(paths []string, targetFolder string, seen map[string]bool, capacity int) scanResult {
+	res := scanResult{}
+	if capacity <= 0 {
+		res.limitHit = true
+		return res
+	}
+
+	var addFile func(string)
+	addFile = func(p string) {
+		if len(res.files) >= capacity {
+			res.limitHit = true
+			return
+		}
+		if !validator.IsPathSafe(p) {
+			return
+		}
+		if validator.IsSystemDir(p) {
+			return
+		}
+
+		stat, err := os.Lstat(p)
+		if err != nil {
+			return
+		}
+		if stat.Mode()&os.ModeSymlink != 0 {
+			return
+		}
+
+		if stat.IsDir() {
+			if targetFolder != "" && validator.IsNested(p, targetFolder) {
+				return
+			}
+			_ = filepath.WalkDir(p, func(subPath string, d os.DirEntry, walkErr error) error {
+				if len(res.files) >= capacity {
+					res.limitHit = true
+					return fmt.Errorf("limit reached")
+				}
+				if walkErr != nil {
+					return nil
+				}
+				if d.Type()&os.ModeSymlink != 0 {
+					return nil
+				}
+				if d.IsDir() {
+					return nil
+				}
+				addFile(subPath)
+				return nil
+			})
+			return
+		}
+
+		key := normalizePath(p)
+		if seen[key] {
+			return
+		}
+
+		info, err := metadata.GetFileInfo(p)
+		if err != nil {
+			logger.Error("Drop check err: %v", err)
+			return
+		}
+
+		if targetFolder != "" && sameFolder(filepath.Dir(info.Path), targetFolder) {
+			return
+		}
+
+		seen[key] = true
+		res.files = append(res.files, info)
+	}
+
+	for _, p := range paths {
+		if len(res.files) >= capacity {
+			res.limitHit = true
+			break
+		}
+		addFile(p)
+	}
+
+	return res
 }
 
 func (ui *LumeUI) HandleDrop(ps []string) {
 	ui.mutex.Lock()
-	if ui.isProcessing {
+	if ui.isProcessing || ui.isScanning {
 		ui.mutex.Unlock()
 		return
 	}
@@ -556,94 +671,55 @@ func (ui *LumeUI) HandleDrop(ps []string) {
 				}
 				ui.mutex.Lock()
 				ui.TargetFolder = ps[0]
-				ui.updateTargetLabel()
 				ui.Config.TargetFolder = ui.TargetFolder
-				config.SaveConfig(ui.Config)
+				snapshot := ui.Config
 				ui.mutex.Unlock()
+
+				ui.updateTargetLabel()
+				config.SaveConfig(snapshot)
 				return
 			}
 		}
 	}
 
 	ui.mutex.Lock()
-	defer ui.mutex.Unlock()
-
-	var addFile func(string)
-	addFile = func(p string) {
-		if ui.FileCount >= MaxFilesLimit {
-			return
-		}
-		if !validator.IsPathSafe(p) {
-			return
-		}
-
-		if validator.IsSystemDir(p) {
-			return
-		}
-
-		stat, err := os.Lstat(p)
-		if err != nil {
-			return
-		}
-
-		if stat.Mode()&os.ModeSymlink != 0 {
-			return
-		}
-
-		if stat.IsDir() {
-			if ui.TargetFolder != "" && validator.IsNested(p, ui.TargetFolder) {
-				return
-			}
-			_ = filepath.WalkDir(p, func(subPath string, d os.DirEntry, walkErr error) error {
-				if ui.FileCount >= MaxFilesLimit {
-					return fmt.Errorf("limit reached")
-				}
-				if walkErr != nil {
-					return nil
-				}
-
-				if d.Type()&os.ModeSymlink != 0 {
-					return nil
-				}
-				if d.IsDir() {
-					return nil
-				}
-				addFile(subPath)
-				return nil
-			})
-			return
-		}
-
-		info, err := metadata.GetFileInfo(p)
-		if err != nil {
-			logger.Error("Drop check err: %v", err)
-			return
-		}
-
-		if filepath.Dir(info.Path) == ui.TargetFolder {
-			return
-		}
-
-		for _, existing := range ui.FilesToMove {
-			if existing.Path == info.Path {
-				return
-			}
-		}
-
-		ui.FilesToMove = append(ui.FilesToMove, info)
-		ui.FileCount++
+	target := ui.TargetFolder
+	capacity := MaxFilesLimit - ui.FileCount
+	seen := make(map[string]bool, len(ui.FilesToMove))
+	for _, f := range ui.FilesToMove {
+		seen[normalizePath(f.Path)] = true
 	}
+	ui.isScanning = true
+	ui.mutex.Unlock()
 
-	for _, p := range ps {
-		if ui.FileCount >= MaxFilesLimit {
-			walk.MsgBox(ui.MainWindow, ui.T("warn_title"), fmt.Sprintf(ui.T("warn_max"), MaxFilesLimit), walk.MsgBoxIconWarning)
-			break
-		}
-		addFile(p)
-	}
+	ui.StartBtn.SetEnabled(false)
+	ui.StatusLabel.SetText(ui.T("scanning"))
 
+	go func() {
+		res := scanDroppedPaths(ps, target, seen, capacity)
+
+		ui.MainWindow.Synchronize(func() {
+			ui.mutex.Lock()
+			ui.FilesToMove = append(ui.FilesToMove, res.files...)
+			ui.FileCount = len(ui.FilesToMove)
+			list := ui.FilesToMove
+			ui.isScanning = false
+			ui.mutex.Unlock()
+
+			ui.rebuildFileRows(list)
+			ui.StartBtn.SetEnabled(true)
+			ui.StatusLabel.SetText(ui.GetStatusText())
+
+			if res.limitHit {
+				walk.MsgBox(ui.MainWindow, ui.T("warn_title"), fmt.Sprintf(ui.T("warn_max"), MaxFilesLimit), walk.MsgBoxIconWarning)
+			}
+		})
+	}()
+}
+
+func (ui *LumeUI) rebuildFileRows(list []metadata.FileInfo) {
 	ui.FilesModel.items = nil
-	for i, f := range ui.FilesToMove {
+	for i, f := range list {
 		targetPath := filepath.Join(f.Year, f.Month, f.Device)
 		ui.FilesModel.items = append(ui.FilesModel.items, &FileItem{
 			Index:  i,
@@ -655,8 +731,15 @@ func (ui *LumeUI) HandleDrop(ps []string) {
 		})
 	}
 	ui.FilesModel.PublishRowsReset()
+}
 
-	ui.StatusLabel.SetText(ui.GetStatusText())
+func sameFolder(a, b string) bool {
+	absA, errA := filepath.Abs(a)
+	absB, errB := filepath.Abs(b)
+	if errA != nil || errB != nil {
+		return false
+	}
+	return strings.EqualFold(filepath.Clean(absA), filepath.Clean(absB))
 }
 
 func formatSize(bytes int64) string {
@@ -709,6 +792,12 @@ func (ui *LumeUI) StartOrganizing() {
 		return
 	}
 	wl = activeFiles
+	ui.rebuildFileRows(wl)
+
+	ui.mutex.Lock()
+	dryRun := ui.Config.DryRun
+	rename := ui.Config.Rename
+	ui.mutex.Unlock()
 
 	ui.StatusLabel.SetText(ui.T("checking_space"))
 	var ts int64
@@ -736,8 +825,6 @@ func (ui *LumeUI) StartOrganizing() {
 	go func() {
 		defer cancel()
 		total, res, successCount, skipCount := len(wl), make([]OrganizeResult, 0), 0, 0
-		dryRun := ui.Config.DryRun
-		rename := ui.Config.Rename
 
 		state := organizer.NewState()
 

@@ -114,3 +114,24 @@ func TestGetFileInfo_UnsupportedExt(t *testing.T) {
 		t.Errorf("Hata mesajı 'unsupported' içermeli; alınan: %v", err)
 	}
 }
+
+func TestSupportedExtensions_CoversCLIFormats(t *testing.T) {
+	required := []string{
+		".jpg", ".jpeg", ".png", ".webp", ".heic", ".tiff", ".gif", ".bmp",
+		".dng", ".cr2", ".nef", ".arw", ".orf",
+		".mp4", ".mov", ".avi", ".mkv", ".m4v", ".flv", ".wmv", ".mpg", ".mpeg", ".3gp",
+	}
+	for _, ext := range required {
+		if !SupportedExtensions[ext] {
+			t.Errorf("SupportedExtensions[%q] = false; CLI sürümüyle aynı formatlar desteklenmeli", ext)
+		}
+	}
+}
+
+func TestExifCapableExtensions_ExcludesVideo(t *testing.T) {
+	for _, ext := range []string{".mp4", ".mov", ".avi", ".mkv", ".3gp"} {
+		if exifCapableExtensions[ext] {
+			t.Errorf("exifCapableExtensions[%q] = true; video dosyalarında EXIF taranmamalı", ext)
+		}
+	}
+}

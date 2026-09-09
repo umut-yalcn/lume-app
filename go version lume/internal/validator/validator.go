@@ -85,8 +85,12 @@ func IsPathSafe(path string) bool {
 		}
 	}
 
-	if strings.Contains(path, "..") {
-		return false
+	for _, segment := range strings.FieldsFunc(path, func(r rune) bool {
+		return r == '/' || r == '\\'
+	}) {
+		if segment == ".." {
+			return false
+		}
 	}
 	return true
 }

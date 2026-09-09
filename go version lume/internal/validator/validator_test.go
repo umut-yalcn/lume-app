@@ -94,3 +94,18 @@ func TestCheckWritability_TempDir(t *testing.T) {
 		t.Errorf("CheckWritability(%q) = %v; geçici dizin yazılabilir olmalıydı", tmpDir, err)
 	}
 }
+
+func TestIsPathSafe_DoubleDotInFileName(t *testing.T) {
+	if !IsPathSafe(`C:\Users\Test\foto..2024.jpg`) {
+		t.Error("IsPathSafe dosya adı içindeki '..' nedeniyle geçerli yolu reddetmemeli")
+	}
+	if !IsPathSafe(`C:\Users\Test\tatil..arsiv\a.jpg`) {
+		t.Error("IsPathSafe klasör adı içindeki '..' nedeniyle geçerli yolu reddetmemeli")
+	}
+}
+
+func TestIsPathSafe_TraversalForwardSlash(t *testing.T) {
+	if IsPathSafe("C:/Users/../Windows/evil.exe") {
+		t.Error("IsPathSafe ileri bölü ile yazılmış traversal yolunu reddetmeli")
+	}
+}
