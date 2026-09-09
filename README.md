@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="screenshots/lume current logo.png" alt="Lume logo" width="160"/>
+</p>
+
 # Lume
 ![Windows](https://img.shields.io/badge/Windows-0078D4?style=for-the-badge&logo=windows11&logoColor=white) 
 
@@ -22,7 +26,6 @@ Automatic folder organization with EXIF metadata, duplicate detection with MD5 (
     <img src="screenshots/lume go version light tr.png" alt="3" width="300"/>
     <img src="screenshots/lume go version light en.png" alt="4" width="300"/>
     <img src="screenshots/listed folders month.png" alt="5" width="300"/>
-    <img src="screenshots/lume current logo.png" alt="Current Lume logo" width="300"/>
     <img src="screenshots/lume cli version powershell.png" alt="2" width="300"/>
     <img src="screenshots/lume cli version powershell success.png" alt="2" width="300"/>
     <img src="screenshots/lume cli version powershell simulation.png" alt="2" width="300"/>
@@ -49,7 +52,7 @@ Bu araç desteklenen medya dosyalarını saniyeler içinde tarar, tek bir hedef 
 ### Avantajları neler?
 
 .Yüzlerce dosyayı tek tek seçmek yerine tek tıkla hedef klasöre aktarın.
-.İhtiyacınız olan desteklenen medya uzantılarını arşivleyebilirsiniz (.jpg, .png, .mp4, .mov vb.).
+.İhtiyacınız olan desteklenen medya uzantılarını arşivleyebilirsiniz (.jpg, .png, .mp4, .mov, RAW formatları vb. — tam liste aşağıda).
 .İşlem sonunda hangi dosyanın nereye kopyalanıp arşivlendiğini net bir şekilde görün.
 
 Versiyonlar: Lume'un 3 farklı sürümü bulunmaktadır: Python GUI, Go GUI ve Go CLI.
@@ -67,7 +70,7 @@ This tool scans supported media files in seconds, securely copies and archives t
 ### What are the advantages?
 
 .Transfer hundreds of files to the target folder with a single click instead of selecting them one by one.
-.Target only the supported media extensions you need (.jpg, .png, .mp4, .mov, etc.).
+.Target only the supported media extensions you need (.jpg, .png, .mp4, .mov, RAW formats, etc. — full list below).
 .Clearly see which file was copied and archived where at the end of the process.
 
 Versions: Lume has 3 different versions: Python GUI, Go GUI, and Go CLI.
@@ -249,6 +252,32 @@ Example (with EXIF and renaming):
 ```powershell
 .\lume_go_cli.exe "C:\SourceFolder" "C:\TargetFolder" --exif --rename
 ```
+
+---
+
+## Desteklenen formatlar
+
+Üç sürüm de aynı listeyi destekler:
+
+* Görsel: `.jpg` `.jpeg` `.png` `.webp` `.heic` `.tiff` `.gif` `.bmp`
+* RAW: `.dng` `.cr2` `.nef` `.arw` `.orf`
+* Video: `.mp4` `.mov` `.avi` `.mkv` `.m4v` `.flv` `.wmv` `.mpg` `.mpeg` `.3gp`
+
+EXIF çekim tarihi yalnız görsel ve RAW dosyalarında okunur; videolarda dosya tarihi kullanılır. Python GUI sürümü EXIF'i yalnız JPEG ve TIFF dosyalarından okur, diğerlerinde dosya tarihine düşer.
+
+Her üç sürüm de dosyaları **kopyalar** — kaynak klasördeki dosyalar silinmez veya taşınmaz. Kopyalama sonrası hedef dosyanın karması kaynakla karşılaştırılır; uyuşmazsa bozuk kopya silinir ve kaynak korunur.
+
+## Supported formats
+
+All three versions support the same list:
+
+* Images: `.jpg` `.jpeg` `.png` `.webp` `.heic` `.tiff` `.gif` `.bmp`
+* RAW: `.dng` `.cr2` `.nef` `.arw` `.orf`
+* Video: `.mp4` `.mov` `.avi` `.mkv` `.m4v` `.flv` `.wmv` `.mpg` `.mpeg` `.3gp`
+
+EXIF capture dates are read from images and RAW files only; videos fall back to the file date. The Python GUI reads EXIF from JPEG and TIFF only and falls back to the file date for everything else.
+
+All three versions **copy** files — nothing is moved or deleted from the source folder. After each copy the target hash is compared against the source; on mismatch the corrupt copy is removed and the source is left untouched.
 
 ---
 
