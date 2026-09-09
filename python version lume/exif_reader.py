@@ -34,6 +34,17 @@ EXTENDED_UNC_PREFIX = '\\\\?\\UNC'
 LONG_PATH_THRESHOLD = 250
 
 
+def is_link(path: str) -> bool:
+
+    # os.path.islink Python 3.8+ ile Windows junction'larini da yakalar.
+    # realpath/abspath karsilastirmasi KULLANILMAZ: 8.3 kisa ad (RUNNER~1)
+    # veya eslenmis surucu iceren yollarda siradan dosyalari symlink sanar.
+    try:
+        return os.path.islink(path)
+    except OSError:
+        return False
+
+
 def long_path(path: str) -> str:
 
     if os.name != 'nt':
@@ -55,9 +66,7 @@ def get_file_hash(file_path: str, quick: bool = True) -> str:
 
     try:
 
-        real_path = os.path.realpath(file_path)
-        abs_path = os.path.abspath(file_path)
-        if os.path.normcase(real_path) != os.path.normcase(abs_path):
+        if is_link(file_path):
             logger.warning(f"Symlink detected in hash calculation: {os.path.basename(file_path)}")
             return ""
 
@@ -198,9 +207,7 @@ def get_file_info(file_path: str) -> dict:
 
     try:
 
-        real_path = os.path.realpath(file_path)
-        abs_path = os.path.abspath(file_path)
-        if os.path.normcase(real_path) != os.path.normcase(abs_path):
+        if is_link(file_path):
             logger.warning(f"Security: Symlink blocked - {os.path.basename(file_path)}")
             return {}
 

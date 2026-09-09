@@ -8,7 +8,7 @@ from pathlib import Path
 
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
-from exif_reader import get_file_info, is_supported_image, get_file_hash
+from exif_reader import get_file_info, is_supported_image, get_file_hash, is_link
 from file_organizer import calculate_new_path, archive_file, get_relative_path, is_nested
 from ui_components import DropZone, FileTable, ProgressDialog
 import config_manager
@@ -455,8 +455,7 @@ class LumeApp(TkinterDnD.Tk):
 
             real_path = os.path.realpath(path)
 
-            abs_path = os.path.abspath(path)
-            if os.path.normcase(real_path) != os.path.normcase(abs_path):
+            if is_link(path):
                 logger.warning(f"Symlink/junction blocked: {os.path.basename(path)}")
                 return False
 

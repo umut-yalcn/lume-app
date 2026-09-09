@@ -1,5 +1,7 @@
 import importlib
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -7,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from file_organizer import archive_file, calculate_new_path, sanitize_folder_name
-from exif_reader import get_exif_data, get_file_info
+from exif_reader import get_exif_data, get_file_hash, get_file_info, is_link
 
 
 class SanitizeSecurityTest(unittest.TestCase):
@@ -66,6 +68,68 @@ class ArchiveEscapeSecurityTest(unittest.TestCase):
         info["device"] = "../../DISARIDA"
         archive_file(info, self.target)
         self.assertFalse(os.path.exists(os.path.join(self.base, "DISARIDA")))
+
+
+class ShortPathRegressionTest(unittest.TestCase):
+    """8.3 kısa ad (RUNNER~1) içeren yollar symlink sanılmamalı.
+
+    Eski kod realpath ile abspath'i karşılaştırıyordu; kısa ad içeren her
+    yolda sıradan dosyalar sessizce reddediliyordu.
+    """
+
+    def _kisa_ad(self, klasor):
+        if os.name != "nt":
+            self.skipTest("8.3 kısa ad yalnız Windows'ta")
+        try:
+            sonuc = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"(New-Object -ComObject Scripting.FileSystemObject)"
+                 f".GetFolder('{klasor}').ShortPath"],
+                capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            self.skipTest("kısa ad alınamadı")
+        kisa = sonuc.stdout.strip()
+        if not kisa or "~" not in kisa:
+            self.skipTest("dosya sistemi 8.3 kısa ad üretmiyor")
+        return kisa
+
+    def test_short_name_path_is_not_treated_as_symlink(self):
+        base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, base, True)
+
+        uzun = os.path.join(base, "runneradmin_uzun_klasor_adi")
+        os.makedirs(uzun, exist_ok=True)
+        kaynak = os.path.join(uzun, "IMG_001.jpg")
+        with open(kaynak, "wb") as handle:
+            handle.write(b"icerik")
+
+        kisa_yol = os.path.join(self._kisa_ad(uzun), "IMG_001.jpg")
+
+        self.assertFalse(is_link(kisa_yol), "kısa ad symlink değildir")
+        self.assertTrue(get_file_info(kisa_yol), "kısa adlı yol okunabilmeli")
+        self.assertTrue(get_file_hash(kisa_yol, quick=False),
+                        "kısa adlı yolda karma hesaplanabilmeli")
+
+    def test_short_name_file_can_be_archived(self):
+        base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, base, True)
+
+        uzun = os.path.join(base, "runneradmin_uzun_klasor_adi")
+        os.makedirs(uzun, exist_ok=True)
+        kaynak = os.path.join(uzun, "IMG_002.jpg")
+        with open(kaynak, "wb") as handle:
+            handle.write(b"arsivlenecek")
+
+        kisa_yol = os.path.join(self._kisa_ad(uzun), "IMG_002.jpg")
+        hedef = os.path.join(base, "arsiv")
+        os.makedirs(hedef, exist_ok=True)
+
+        info = get_file_info(kisa_yol)
+        self.assertTrue(info)
+        self.assertTrue(archive_file(info, hedef), "kısa adlı dosya arşivlenebilmeli")
+
+        arsivlenen = [ad for _, _, adlar in os.walk(hedef) for ad in adlar]
+        self.assertIn("IMG_002.jpg", arsivlenen)
 
 
 class SymlinkSecurityTest(unittest.TestCase):
