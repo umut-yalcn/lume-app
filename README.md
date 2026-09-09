@@ -144,6 +144,25 @@ Tarama ekran görüntülerini burada tek yerde paylaşıyorum.
 VirusTotal tek başına kesin güvenlik garantisi değildir, ama indirilen dosyayı farklı antivirüs motorlarıyla hızlıca karşılaştırmak için iyi bir referanstır.
 Lume yerel çalışır; internet bağlantısı, telemetri veya analiz gönderimi kullanmaz.
 
+> **Not:** Aşağıdaki tarama görselleri **v1.1** sürümünün dosyalarına aittir; güncel sürümün taraması değildir.
+> İndirdiğiniz dosyayı kendiniz doğrulamak için aşağıdaki SHA-256 özetlerini kullanın.
+
+### v2.2 dosya özetleri (SHA-256)
+
+| Dosya | SHA-256 |
+|---|---|
+| `lume_python_gui.exe` | `3ffe945baa0bdb70d400db4af980c267783e656604459445e377a2e7979ec393` |
+| `lume_go_gui.exe` | `da44d19a4f03f8b2d62087614f2dc259e3c810ee1714926d76d136f425b09115` |
+| `lume_go_cli.exe` | `ecf701023a2e881e8a0af3e9414eba75e71e603f952e15ce7203bc20dbcb218b` |
+
+İndirdiğiniz dosyanın özetini PowerShell ile alın ve yukarıdakiyle karşılaştırın:
+
+```powershell
+Get-FileHash .\lume_go_gui.exe -Algorithm SHA256
+```
+
+Aynı özeti VirusTotal'ın arama kutusuna yapıştırarak, dosyayı yüklemeden güncel tarama sonucuna bakabilirsiniz.
+
 ## VirusTotal Verification
 
 You can also check the released `.exe` files for the Python GUI, Go GUI, and Go CLI versions on VirusTotal.
@@ -151,6 +170,15 @@ I keep the scan screenshots here in one place.
 
 VirusTotal is not a complete security guarantee by itself, but it is a useful reference for comparing a downloaded file against multiple antivirus engines.
 Lume runs locally and does not require internet access, telemetry, or analytics.
+
+> **Note:** The scan screenshots below are from the **v1.1** binaries and do not reflect the current release.
+> To verify what you downloaded, use the SHA-256 digests above (`v2.2 dosya özetleri`) and compare them with:
+>
+> ```powershell
+> Get-FileHash .\lume_go_gui.exe -Algorithm SHA256
+> ```
+>
+> Pasting that digest into VirusTotal's search box shows the current scan without uploading the file.
 
 ### Python GUI
 
