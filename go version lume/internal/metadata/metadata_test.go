@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGetFileHash_Length(t *testing.T) {
@@ -133,5 +134,86 @@ func TestExifCapableExtensions_ExcludesVideo(t *testing.T) {
 		if exifCapableExtensions[ext] {
 			t.Errorf("exifCapableExtensions[%q] = true; video dosyalarında EXIF taranmamalı", ext)
 		}
+	}
+}
+
+func TestExtractExif_ReadsDateAndModel(t *testing.T) {
+	tarih, cihaz, err := ExtractExif(filepath.Join("testdata", "with_exif.jpg"))
+	if err != nil {
+		t.Fatalf("ExtractExif: %v", err)
+	}
+	if tarih == nil {
+		t.Fatal("EXIF çekim tarihi okunamadı")
+	}
+	if got := tarih.Format("2006-01-02 15:04:05"); got != "2019-03-14 15:09:26" {
+		t.Errorf("tarih = %s; 2019-03-14 15:09:26 bekleniyordu", got)
+	}
+	if cihaz != "Lume TestCam" {
+		t.Errorf("cihaz = %q; \"Lume TestCam\" bekleniyordu", cihaz)
+	}
+}
+
+func TestExtractExif_NoExifIsNotAnError(t *testing.T) {
+	tarih, _, err := ExtractExif(filepath.Join("testdata", "no_exif.jpg"))
+	if err != nil {
+		t.Errorf("EXIF'siz dosya hata üretmemeli: %v", err)
+	}
+	if tarih != nil {
+		t.Errorf("EXIF'siz dosyada tarih dönmemeli: %v", tarih)
+	}
+}
+
+func TestGetFileInfo_UsesExifDateOverModTime(t *testing.T) {
+	kaynak := filepath.Join("testdata", "with_exif.jpg")
+	dir := t.TempDir()
+	hedef := filepath.Join(dir, "foto.jpg")
+
+	veri, err := os.ReadFile(kaynak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(hedef, veri, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// ModTime'i EXIF tarihinden farkli bir yila cek
+	baska := time.Date(2023, 8, 1, 10, 0, 0, 0, time.Local)
+	if err := os.Chtimes(hedef, baska, baska); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := GetFileInfo(hedef)
+	if err != nil {
+		t.Fatalf("GetFileInfo: %v", err)
+	}
+	if info.Year != "2019" || info.Month != "03" {
+		t.Errorf("Year/Month = %s/%s; EXIF tarihi (2019/03) kullanılmalıydı", info.Year, info.Month)
+	}
+	if info.Device != "Lume TestCam" {
+		t.Errorf("Device = %q; EXIF modeli kullanılmalıydı", info.Device)
+	}
+}
+
+func TestGetFileInfo_FallsBackWhenNoExif(t *testing.T) {
+	kaynak := filepath.Join("testdata", "no_exif.jpg")
+	dir := t.TempDir()
+	hedef := filepath.Join(dir, "foto.jpg")
+
+	veri, err := os.ReadFile(kaynak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(hedef, veri, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := GetFileInfo(hedef)
+	if err != nil {
+		t.Fatalf("GetFileInfo: %v", err)
+	}
+	if info.Device != "Unknown" {
+		t.Errorf("Device = %q; EXIF yokken \"Unknown\" kalmalıydı", info.Device)
+	}
+	if info.Year == "" || info.Month == "" {
+		t.Error("EXIF yokken dosya tarihinden yıl/ay türetilmeliydi")
 	}
 }
