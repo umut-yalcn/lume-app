@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -58,6 +59,10 @@ func LoadConfig() Config {
 	if err != nil {
 		return Config{Language: "tr"}
 	}
+
+	// Not Defteri gibi araclar dosyaya BOM ekler; json.Unmarshal bunu
+	// reddedip kullanicinin tum ayarlarini sessizce sifirlardi.
+	file = bytes.TrimPrefix(file, []byte{0xEF, 0xBB, 0xBF})
 
 	var conf Config
 	if err := json.Unmarshal(file, &conf); err != nil {

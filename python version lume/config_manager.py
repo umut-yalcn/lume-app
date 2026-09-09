@@ -34,7 +34,9 @@ def load_config() -> dict:
         return DEFAULT_CONFIG.copy()
 
     try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+        # utf-8-sig: Not Defteri gibi araclar BOM ekler; utf-8 ile okumak
+        # JSONDecodeError verip kullanicinin tum ayarlarini sessizce sifirlardi.
+        with open(CONFIG_FILE, "r", encoding="utf-8-sig") as f:
             config = json.load(f)
 
             validated_config = DEFAULT_CONFIG.copy()

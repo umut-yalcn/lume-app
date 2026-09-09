@@ -165,6 +165,17 @@ class ConfigPoisoningTest(unittest.TestCase):
         for key in ("evil", "cmd", "__proto__"):
             self.assertNotIn(key, loaded, f"zehirli anahtar korundu: {key}")
 
+    def test_config_with_bom_is_still_read(self):
+        """Not Defteri "UTF-8" ile kaydedince dosyaya BOM ekler."""
+        cm = self._fresh_config()
+        os.makedirs(os.path.dirname(cm.CONFIG_FILE), exist_ok=True)
+        with open(cm.CONFIG_FILE, "w", encoding="utf-8-sig") as handle:
+            handle.write('{"language": "tr", "appearance_mode": "dark"}')
+
+        loaded = cm.load_config()
+        self.assertEqual(loaded["language"], "tr", "BOM'lu kayıt okunmalıydı")
+        self.assertEqual(loaded["appearance_mode"], "dark")
+
     def test_invalid_values_are_rejected(self):
         cm = self._fresh_config()
         cm.save_config({"language": "'; DROP TABLE", "appearance_mode": "evil"})

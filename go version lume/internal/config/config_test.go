@@ -114,3 +114,21 @@ func TestSaveConfig_LeavesNoTempFile(t *testing.T) {
 		t.Errorf("kayıt geçerli JSON olmalı: %v", err)
 	}
 }
+
+func TestLoadConfig_AcceptsFileWithBOM(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APPDATA", dir)
+	isolate(t)
+
+	// Not Defteri gibi araclarin "UTF-8" olarak kaydettigi bicim
+	govde := append([]byte{0xEF, 0xBB, 0xBF},
+		[]byte(`{"dark_mode":true,"language":"en","target_folder":"C:\\Arsiv"}`)...)
+	if err := os.WriteFile(getConfigPath(), govde, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got := LoadConfig()
+	if got.Language != "en" || !got.DarkMode || got.TargetFolder != `C:\Arsiv` {
+		t.Errorf("LoadConfig() = %+v; BOM'lu kayıt okunmalıydı", got)
+	}
+}
