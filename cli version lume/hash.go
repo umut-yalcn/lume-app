@@ -36,8 +36,11 @@ func copyAndHashFile(ctx context.Context, src, dst string, mode os.FileMode) (st
 	}
 
 	var success bool
+	closed := false
 	defer func() {
-		out.Close()
+		if !closed {
+			out.Close()
+		}
 		if !success {
 			os.Remove(dst)
 		}
@@ -75,6 +78,7 @@ func copyAndHashFile(ctx context.Context, src, dst string, mode os.FileMode) (st
 	if err := out.Close(); err != nil {
 		return "", fmt.Errorf("dosya kapatılamadı: %w", err)
 	}
+	closed = true
 	success = true
 
 	if err := os.Chmod(dst, mode); err != nil {

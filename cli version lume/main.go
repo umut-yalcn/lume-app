@@ -10,7 +10,7 @@ import (
 	"syscall"
 )
 
-const AppVersion = "1.1-CLI"
+var AppVersion = "1.1-CLI"
 
 type MediaType int
 

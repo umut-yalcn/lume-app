@@ -26,8 +26,10 @@ func collectFiles(src string) ([]fileEntry, int64, error) {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
 	done := make(chan struct{})
+	stopped := make(chan struct{})
 
 	go func() {
+		defer close(stopped)
 		for {
 			select {
 			case <-ticker.C:
@@ -75,6 +77,7 @@ func collectFiles(src string) ([]fileEntry, int64, error) {
 	})
 
 	close(done)
+	<-stopped
 
 	fmt.Printf("\r[INFO] Toplam bulunan dosya: %-10d\n", len(files))
 

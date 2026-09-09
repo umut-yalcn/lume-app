@@ -166,26 +166,37 @@ func (o *Organizer) Process(entry fileEntry) error {
 	}
 	o.plannedPaths[targetPath] = true
 
-	copiedSrcHash, errCopy := copyAndHashFile(o.ctx, path, targetPath, entry.mode)
+	tmpPath := targetPath + ".lume-part"
+	_ = os.Remove(tmpPath)
+
+	copiedSrcHash, errCopy := copyAndHashFile(o.ctx, path, tmpPath, entry.mode)
 	if errCopy != nil {
+		_ = os.Remove(tmpPath)
 		if o.isCancelled() {
 			fmt.Printf("[WARN]  %s: İptal edildi, hedef temizlendi\n", filename)
 			o.errors++
 			return errInterrupted
 		}
 		fmt.Printf("[ERROR] %s: %v\n", filename, errCopy)
-		_ = os.Remove(targetPath)
 		delete(o.plannedPaths, targetPath)
 		o.errors++
 		return nil
 	}
 
-	dstHash, err2 := fileHash(targetPath)
+	dstHash, err2 := fileHash(tmpPath)
 	if err2 != nil || copiedSrcHash != dstHash {
 		fmt.Printf("[ERROR] %s: Kopyalama doğrulama hatası, hedef temizlendi\n", filename)
-		if errDel := os.Remove(targetPath); errDel != nil {
-			fmt.Printf("[WARN]  Bozuk dosya silinemedi: %s: %v\n", targetPath, errDel)
+		if errDel := os.Remove(tmpPath); errDel != nil {
+			fmt.Printf("[WARN]  Bozuk dosya silinemedi: %s: %v\n", tmpPath, errDel)
 		}
+		delete(o.plannedPaths, targetPath)
+		o.errors++
+		return nil
+	}
+
+	if errRename := os.Rename(tmpPath, targetPath); errRename != nil {
+		fmt.Printf("[ERROR] %s: Kopya yayımlanamadı: %v\n", filename, errRename)
+		_ = os.Remove(tmpPath)
 		delete(o.plannedPaths, targetPath)
 		o.errors++
 		return nil
