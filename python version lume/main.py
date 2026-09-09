@@ -1,6 +1,6 @@
 import os
 import sys
-import time
+import queue
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -9,7 +9,7 @@ from pathlib import Path
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from exif_reader import get_file_info, is_supported_image, get_file_hash
-from file_organizer import calculate_new_path, move_file, get_relative_path
+from file_organizer import calculate_new_path, archive_file, get_relative_path, is_nested
 from ui_components import DropZone, FileTable, ProgressDialog
 import config_manager
 from logger_config import logger
@@ -17,7 +17,6 @@ from logger_config import logger
 from translations import get_text
 
 MAX_FILES_LIMIT = 10000
-MAX_PATH_LENGTH = 260
 
 def enable_windows_dpi_awareness():
 
@@ -49,11 +48,11 @@ class LumeApp(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
 
-        self.config = config_manager.load_config()
+        self.app_config = config_manager.load_config()
         logger.info("Application started (Lite - Secured)")
 
         self.title("Lume")
-        self.lang = self.config.get("language", "en")
+        self.lang = self.app_config.get("language", "en")
         self.is_zen_mode = True
         self.geometry("500x450")
         self.resizable(False, False)
@@ -69,12 +68,14 @@ class LumeApp(TkinterDnD.Tk):
         except Exception:
             pass
 
-        self.is_dark_mode = self.config.get("appearance_mode") == "dark"
+        self.is_dark_mode = self.app_config.get("appearance_mode") == "dark"
         self._apply_theme_colors()
 
         self.files_data = []
         self.added_hashes = set()
-        self.target_folder = self.config.get("target_folder")
+        self._ui_queue = queue.Queue()
+        self._organize_running = False
+        self.target_folder = self.app_config.get("target_folder")
 
         if self.target_folder and not self._validate_target_folder(self.target_folder):
             self.target_folder = None
@@ -391,11 +392,6 @@ class LumeApp(TkinterDnD.Tk):
             if not path:
                 continue
 
-            if len(path) > MAX_PATH_LENGTH:
-                logger.warning(f"Path too long (>{MAX_PATH_LENGTH} chars), skipped")
-                security_blocked = True
-                continue
-
             path = os.path.normpath(path)
 
             if not self._is_safe_path(path):
@@ -424,9 +420,6 @@ class LumeApp(TkinterDnD.Tk):
                             break
 
                         fp = os.path.join(root, f)
-
-                        if len(fp) > MAX_PATH_LENGTH:
-                            continue
 
                         if is_supported_image(fp):
                             result = self._add_file(fp)
@@ -530,14 +523,17 @@ class LumeApp(TkinterDnD.Tk):
             return "blocked"
 
         if file_hash in self.added_hashes:
-            return "duplicate"
+            if self._is_true_duplicate(file_path, file_hash):
+                return "duplicate"
+            logger.info(
+                f"Quick-hash collision resolved as distinct file: {os.path.basename(file_path)}"
+            )
 
         info = get_file_info(file_path)
         if not info:
             return "blocked"
 
         info['quick_hash'] = file_hash
-        info['full_hash'] = get_file_hash(file_path, quick=False)
 
         if self.target_folder:
             new_path = calculate_new_path(info, self.target_folder)
@@ -555,6 +551,26 @@ class LumeApp(TkinterDnD.Tk):
             self._sanitize_path_display(rel, 30)
         )
         return "added"
+
+    def _is_true_duplicate(self, file_path, quick_hash):
+
+        candidate_full = get_file_hash(file_path, quick=False)
+        if not candidate_full:
+            return True
+
+        for existing in self.files_data:
+            if existing.get('quick_hash') != quick_hash:
+                continue
+
+            existing_full = existing.get('full_hash')
+            if existing_full is None:
+                existing_full = get_file_hash(existing['path'], quick=False)
+                existing['full_hash'] = existing_full
+
+            if existing_full and existing_full == candidate_full:
+                return True
+
+        return False
 
     def _select_folder(self):
         folder = filedialog.askdirectory(title="Select Target Folder")
@@ -593,37 +609,60 @@ class LumeApp(TkinterDnD.Tk):
             messagebox.showerror("Lume", self._get_text("err_invalid_folder"))
             return
 
+        for info in self.files_data:
+            if is_nested(os.path.dirname(info['path']), self.target_folder):
+                messagebox.showwarning("Lume", self._get_text("warn_nested_folder"))
+                return
+
         self.start_btn.configure(text=self._get_text("status_organizing"), state="disabled")
         self.progress.reset()
 
+        self._ui_queue = queue.Queue()
+        self._organize_running = True
         threading.Thread(target=self._organize_files_thread, daemon=True).start()
+        self.after(50, self._drain_ui_queue)
+
+    def _drain_ui_queue(self):
+
+        was_running = self._organize_running
+
+        try:
+            while True:
+                callback = self._ui_queue.get_nowait()
+                callback()
+        except queue.Empty:
+            pass
+
+        if was_running:
+            self.after(50, self._drain_ui_queue)
 
     def _organize_files_thread(self):
-        total = len(self.files_data)
+        work_list = list(self.files_data)
+        total = len(work_list)
         success = 0
 
-        for i, info in enumerate(self.files_data):
-            try:
+        try:
+            for i, info in enumerate(work_list):
+                try:
+                    ok = archive_file(info, self.target_folder)
+                    if ok:
+                        success += 1
+                except Exception as e:
 
-                time.sleep(0.01)
+                    logger.error(f"Error archiving file: {str(e)}", exc_info=True)
 
-                ok = move_file(info, self.target_folder)
-                if ok:
-                    success += 1
-            except Exception as e:
-
-                logger.error(f"Error moving file: {str(e)}", exc_info=True)
-
-            self.after(0, lambda c=i+1: self.progress.update_progress(
-                c, total,
-                self._get_text("processing", percentage=int((c/total)*100), current=c, total=total)
-            ))
-
-        self.after(0, lambda: self._on_complete(success))
+                self._ui_queue.put(lambda c=i+1: self.progress.update_progress(
+                    c, total,
+                    self._get_text("processing", percentage=int((c/total)*100), current=c, total=total)
+                ))
+        finally:
+            self._ui_queue.put(lambda: self._on_complete(success))
+            self._organize_running = False
 
     def _on_complete(self, count):
         self.progress.complete(count, self._get_text("status_archived"))
         self.start_btn.configure(text=self._get_text("start"), state="normal")
+        self._clear_list()
         messagebox.showinfo("Lume", self._get_text("info_complete", count=count))
 
 if __name__ == "__main__":

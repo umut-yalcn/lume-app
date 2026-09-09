@@ -3,7 +3,7 @@ import shutil
 import filecmp
 from typing import Dict, Tuple
 from logger_config import logger
-from exif_reader import get_file_hash
+from exif_reader import get_file_hash, long_path
 
 MAX_CONFLICT_WARNING = 1000
 MAX_CONFLICT_LIMIT = 10000
@@ -52,18 +52,18 @@ def generate_target_path(base_path: str, year: str, month: str, device: str, fil
 
 def handle_conflict(source_path: str, target_path: str) -> Tuple[str, bool]:
 
-    if not os.path.lexists(target_path):
+    if not os.path.lexists(long_path(target_path)):
         return target_path, False
 
     try:
-        source_size = os.path.getsize(source_path)
-        target_size = os.path.getsize(target_path)
+        source_size = os.path.getsize(long_path(source_path))
+        target_size = os.path.getsize(long_path(target_path))
 
         if source_size != target_size:
 
             base, ext = os.path.splitext(target_path)
             counter = 1
-            while os.path.lexists(f"{base}_{counter}{ext}"):
+            while os.path.lexists(long_path(f"{base}_{counter}{ext}")):
                 counter += 1
                 if counter > MAX_CONFLICT_LIMIT:
                     raise Exception(f"Conflict limit exceeded: {os.path.basename(source_path)}")
@@ -72,7 +72,7 @@ def handle_conflict(source_path: str, target_path: str) -> Tuple[str, bool]:
         logger.warning(f"Size comparison failed: {e}")
 
     try:
-        if filecmp.cmp(source_path, target_path, shallow=False):
+        if filecmp.cmp(long_path(source_path), long_path(target_path), shallow=False):
             logger.info(f"Duplicate detected: {os.path.basename(source_path)}")
             return target_path, True
     except PermissionError:
@@ -86,11 +86,11 @@ def handle_conflict(source_path: str, target_path: str) -> Tuple[str, bool]:
     while True:
         new_path = f"{base}_{counter}{ext}"
 
-        if not os.path.lexists(new_path):
+        if not os.path.lexists(long_path(new_path)):
             return new_path, False
 
         try:
-            if filecmp.cmp(source_path, new_path, shallow=False):
+            if filecmp.cmp(long_path(source_path), long_path(new_path), shallow=False):
                 logger.info(f"Duplicate found at {counter}: {os.path.basename(source_path)}")
                 return new_path, True
         except Exception:
@@ -105,15 +105,28 @@ def handle_conflict(source_path: str, target_path: str) -> Tuple[str, bool]:
             logger.error(f"Conflict limit exceeded ({MAX_CONFLICT_LIMIT})")
             raise Exception(f"Too many conflicts for: {os.path.basename(source_path)}")
 
+def is_nested(path_a: str, path_b: str) -> bool:
+
+    try:
+        a = os.path.normcase(os.path.abspath(path_a))
+        b = os.path.normcase(os.path.abspath(path_b))
+    except Exception:
+        return False
+
+    if a == b:
+        return True
+
+    return a.startswith(b + os.sep) or b.startswith(a + os.sep)
+
 def ensure_directory(path: str) -> None:
 
     try:
-        os.makedirs(path, exist_ok=True)
+        os.makedirs(long_path(path), exist_ok=True)
     except OSError as e:
         logger.error(f"Failed to create directory: {e}")
         raise
 
-def move_file(file_info: Dict, target_base: str) -> bool:
+def archive_file(file_info: Dict, target_base: str) -> bool:
 
     source = None
     final_target = None
@@ -122,7 +135,7 @@ def move_file(file_info: Dict, target_base: str) -> bool:
         source = file_info['path']
         filename = os.path.basename(source)
 
-        if not os.path.exists(source):
+        if not os.path.exists(long_path(source)):
             logger.error(f"Source file not found: {filename}")
             return False
 
@@ -153,7 +166,7 @@ def move_file(file_info: Dict, target_base: str) -> bool:
             logger.error(f"Integrity hash unavailable for {filename}; source preserved")
             return False
 
-        shutil.copy2(source, final_target)
+        shutil.copy2(long_path(source), long_path(final_target))
 
         target_hash = get_file_hash(final_target, quick=False)
 
@@ -166,14 +179,6 @@ def move_file(file_info: Dict, target_base: str) -> bool:
             except Exception as remove_err:
                 logger.critical(f"CRITICAL: Failed to remove corrupt copy: {remove_err}")
             return False
-
-        try:
-            os.remove(source)
-        except PermissionError:
-            logger.warning(f"Could not delete source (permission denied): {filename}")
-
-        except Exception as del_err:
-            logger.warning(f"Could not delete source: {filename} - {del_err}")
 
         rel_path = os.path.relpath(final_target, target_base)
         logger.info(f"Archived: {filename} -> {rel_path}")
@@ -194,7 +199,7 @@ def move_file(file_info: Dict, target_base: str) -> bool:
         if source:
             logger.error(f"Unexpected error: {os.path.basename(source)} - {str(e)}")
         else:
-            logger.error(f"Unexpected error in move_file: {str(e)}")
+            logger.error(f"Unexpected error in archive_file: {str(e)}")
         return False
 
 def calculate_new_path(file_info: dict, target_base: str) -> str:

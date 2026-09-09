@@ -4,7 +4,13 @@ from datetime import datetime
 import piexif
 from logger_config import logger
 
-SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.tiff', '.tif', '.webp', '.png', '.heic', '.mov', '.mp4'}
+SUPPORTED_EXTENSIONS = {
+    '.jpg', '.jpeg', '.png', '.webp', '.heic', '.tiff', '.tif', '.gif', '.bmp',
+    '.dng', '.cr2', '.nef', '.arw', '.orf',
+    '.mp4', '.mov', '.avi', '.mkv', '.m4v', '.flv', '.wmv', '.mpg', '.mpeg', '.3gp'
+}
+
+EXIF_CAPABLE_EXTENSIONS = {'.jpg', '.jpeg', '.tiff', '.tif'}
 MAX_METADATA_FILE_SIZE = 250 * 1024 * 1024
 HASH_BUFFER_SIZE = 64 * 1024
 QUICK_HASH_READ_SIZE = 4096
@@ -23,6 +29,28 @@ SOURCE_PATTERNS = {
     'AI Generated': ['dalle', 'midjourney', 'stable_diffusion']
 }
 
+EXTENDED_PREFIX = '\\\\?\\'
+EXTENDED_UNC_PREFIX = '\\\\?\\UNC'
+LONG_PATH_THRESHOLD = 250
+
+
+def long_path(path: str) -> str:
+
+    if os.name != 'nt':
+        return path
+
+    if path.startswith(EXTENDED_PREFIX):
+        return path
+
+    absolute = os.path.abspath(path)
+    if len(absolute) < LONG_PATH_THRESHOLD:
+        return absolute
+
+    if absolute.startswith('\\\\'):
+        return EXTENDED_UNC_PREFIX + absolute[1:]
+
+    return EXTENDED_PREFIX + absolute
+
 def get_file_hash(file_path: str, quick: bool = True) -> str:
 
     try:
@@ -33,14 +61,14 @@ def get_file_hash(file_path: str, quick: bool = True) -> str:
             logger.warning(f"Symlink detected in hash calculation: {os.path.basename(file_path)}")
             return ""
 
-        stat = os.stat(file_path)
+        stat = os.stat(long_path(file_path))
 
         if quick:
 
             hasher = hashlib.md5()
 
             try:
-                with open(file_path, 'rb') as f:
+                with open(long_path(file_path), 'rb') as f:
                     header = f.read(QUICK_HASH_READ_SIZE)
                     hasher.update(header)
                     header_hash = hasher.hexdigest()[:8]
@@ -52,7 +80,7 @@ def get_file_hash(file_path: str, quick: bool = True) -> str:
 
             hasher = hashlib.md5()
 
-            with open(file_path, 'rb') as f:
+            with open(long_path(file_path), 'rb') as f:
                 while True:
                     chunk = f.read(HASH_BUFFER_SIZE)
                     if not chunk:
@@ -83,7 +111,7 @@ def get_exif_data(file_path: str) -> dict:
 
     try:
 
-        with open(file_path, 'rb') as f:
+        with open(long_path(file_path), 'rb') as f:
             file_bytes = f.read()
         exif_dict = piexif.load(file_bytes)
 
@@ -125,7 +153,7 @@ def get_exif_data(file_path: str) -> dict:
 
     if result['date'] is None:
         try:
-            file_stat = os.stat(file_path)
+            file_stat = os.stat(long_path(file_path))
             creation_time = file_stat.st_ctime
             file_date = datetime.fromtimestamp(creation_time)
 
@@ -184,10 +212,10 @@ def get_file_info(file_path: str) -> dict:
             logger.warning(f"Security: Path traversal blocked - {os.path.basename(file_path)}")
             return {}
 
-        file_size = os.path.getsize(file_path)
+        file_size = os.path.getsize(long_path(file_path))
         ext = os.path.splitext(file_path)[1].lower()
 
-        has_exif_support = ext in {'.jpg', '.jpeg', '.tiff', '.tif'}
+        has_exif_support = ext in EXIF_CAPABLE_EXTENSIONS
         if has_exif_support and file_size <= MAX_METADATA_FILE_SIZE:
             exif_data = get_exif_data(file_path)
         else:
@@ -203,7 +231,7 @@ def get_file_info(file_path: str) -> dict:
             }
 
             try:
-                file_stat = os.stat(file_path)
+                file_stat = os.stat(long_path(file_path))
                 file_date = datetime.fromtimestamp(file_stat.st_ctime)
                 exif_data.update({
                     'date': file_date,

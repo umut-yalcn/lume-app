@@ -4,6 +4,7 @@ import os
 VALID_KEYS = {"target_folder", "appearance_mode", "language"}
 VALID_MODES = {"dark", "light"}
 VALID_LANGS = {"en", "tr"}
+MAX_TARGET_PATH_LENGTH = 4096
 
 def get_config_path():
 
@@ -47,7 +48,7 @@ def load_config() -> dict:
                 if key == "language" and value not in VALID_LANGS:
                     continue
                 if key == "target_folder" and value is not None:
-                    if not isinstance(value, str) or len(value) > 260:
+                    if not isinstance(value, str) or len(value) > MAX_TARGET_PATH_LENGTH:
                         continue
 
                 validated_config[key] = value
@@ -106,7 +107,7 @@ def update_setting(key: str, value):
         if not isinstance(value, str):
             return False
 
-        if len(value) > 260:
+        if len(value) > MAX_TARGET_PATH_LENGTH:
             return False
 
         if not os.path.exists(value):
