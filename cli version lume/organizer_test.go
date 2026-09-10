@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -274,5 +275,33 @@ func TestProcess_LeavesNoPartialFiles(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("hedef taranamadı: %v", err)
+	}
+}
+
+func TestPrintHelp_UsesShippedExecutableName(t *testing.T) {
+	eski, yeni := os.Stdout, ""
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	printHelp()
+	w.Close()
+	os.Stdout = eski
+
+	var buf strings.Builder
+	if _, err := io.Copy(&buf, r); err != nil {
+		t.Fatal(err)
+	}
+	yeni = buf.String()
+
+	if strings.Contains(yeni, "Lume_LITE") {
+		t.Error("yardım metni yayından kaldırılmış exe adını (Lume_LITE) gösteriyor")
+	}
+	if !strings.Contains(yeni, "lume_go_cli.exe") {
+		t.Error("yardım metni yayınlanan exe adını (lume_go_cli.exe) göstermeli")
+	}
+	if !strings.Contains(yeni, AppVersion) {
+		t.Errorf("yardım metni sürümü (%s) göstermeli", AppVersion)
 	}
 }

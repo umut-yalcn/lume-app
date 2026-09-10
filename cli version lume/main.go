@@ -35,8 +35,8 @@ func printHelp() {
 	fmt.Printf(`
 Lume CLI v%s - Fotoğraf ve Video Arşivleyici
 
-Kullanım: Lume_LITE.exe <kaynak> <hedef> [seçenekler]
-Örnek:   Lume_LITE.exe "C:\Fotos" "C:\Arsiv" --exif --dry-run --rename
+Kullanım: lume_go_cli.exe <kaynak> <hedef> [seçenekler]
+Örnek:   lume_go_cli.exe "C:\Fotos" "C:\Arsiv" --exif --dry-run --rename
 
 Seçenekler:
   --exif       Görsellerde ve RAW dosyalarında EXIF çekim tarihini (DateTimeOriginal) okur.
@@ -47,8 +47,8 @@ Seçenekler:
 
 Lume CLI v%s - Photo & Video Archiver
 
-Usage:   Lume_LITE.exe <source> <target> [options]
-Example: Lume_LITE.exe "C:\Photos" "C:\Archive" --exif --dry-run --rename
+Usage:   lume_go_cli.exe <source> <target> [options]
+Example: lume_go_cli.exe "C:\Photos" "C:\Archive" --exif --dry-run --rename
 
 Options:
   --exif       Reads EXIF shooting date (DateTimeOriginal) from images and RAW files.
