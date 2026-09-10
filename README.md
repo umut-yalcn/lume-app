@@ -175,9 +175,9 @@ Lume yerel çalışır; internet bağlantısı, telemetri veya analiz gönderimi
 
 | Dosya | SHA-256 |
 |---|---|
-| `lume_python_gui.exe` | `3ffe945baa0bdb70d400db4af980c267783e656604459445e377a2e7979ec393` |
-| `lume_go_gui.exe` | `da44d19a4f03f8b2d62087614f2dc259e3c810ee1714926d76d136f425b09115` |
-| `lume_go_cli.exe` | `ecf701023a2e881e8a0af3e9414eba75e71e603f952e15ce7203bc20dbcb218b` |
+| `lume_python_gui.exe` | `03d30ac0048dd7cc7f0de237f2cfac4b4834a74091b385d0090e5ef1f3bcc435` |
+| `lume_go_gui.exe` | `5323fa5ed81454322f2029e4def629f2ca12cc6f69ff35ecf60d9b16880b7414` |
+| `lume_go_cli.exe` | `4e2f5536a1a4852a04cb3d7f404e2a2dab9e613fa2e80ca670c817542b65e10c` |
 
 İndirdiğiniz dosyanın özetini PowerShell ile alın ve yukarıdakiyle karşılaştırın:
 
