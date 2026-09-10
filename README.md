@@ -339,6 +339,18 @@ EXIF çekim tarihi yalnız görsel ve RAW dosyalarında okunur; videolarda dosya
 
 Her üç sürüm de dosyaları **kopyalar** — kaynak klasördeki dosyalar silinmez veya taşınmaz. Kopyalama sonrası hedef dosyanın karması kaynakla karşılaştırılır; uyuşmazsa bozuk kopya silinir ve kaynak korunur.
 
+### Kopya algılama sürümlere göre farklıdır
+
+| Sürüm | Ne zaman karşılaştırır | Sonuç |
+|---|---|---|
+| Python GUI | Dosyalar listeye eklenirken, içeriğe göre | Aynı içerikli dosya, **adı farklı olsa bile** bir kez arşivlenir |
+| Go GUI / CLI | Arşivlerken, hedef yola göre | Yalnızca aynı hedef ada düşen aynı içerikli dosya atlanır; farklı adlardaki aynı içerik ayrı ayrı kopyalanır |
+
+Örnek: `tatil.jpg` ve `tatil_kopya.jpg` aynı içeriğe sahipse, Python GUI bunlardan
+birini arşivler; Go sürümleri ikisini de kopyalar. Yinelenen dosyaları ayıklamak
+istiyorsanız Python GUI, kaynağın birebir kopyasını çıkarmak istiyorsanız Go
+sürümleri beklediğiniz sonucu verir.
+
 ## Supported formats
 
 All three versions support the same list:
@@ -350,6 +362,17 @@ All three versions support the same list:
 EXIF capture dates are read from images and RAW files only; videos fall back to the file date. The Python GUI reads EXIF from JPEG and TIFF only and falls back to the file date for everything else.
 
 All three versions **copy** files — nothing is moved or deleted from the source folder. After each copy the target hash is compared against the source; on mismatch the corrupt copy is removed and the source is left untouched.
+
+### Duplicate detection differs per version
+
+| Version | Compared when | Result |
+|---|---|---|
+| Python GUI | While files are added to the list, by content | Identical content is archived once, **even under different names** |
+| Go GUI / CLI | While archiving, by target path | Only identical content landing on the same target name is skipped; the same content under different names is copied separately |
+
+Example: if `holiday.jpg` and `holiday_copy.jpg` hold the same bytes, the Python
+GUI archives one of them while the Go versions copy both. Use the Python GUI to
+weed out duplicates, and the Go versions to reproduce the source faithfully.
 
 ---
 
