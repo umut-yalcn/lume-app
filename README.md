@@ -188,8 +188,28 @@ Tarama ekran görüntülerini burada tek yerde paylaşıyorum.
 VirusTotal tek başına kesin güvenlik garantisi değildir, ama indirilen dosyayı farklı antivirüs motorlarıyla hızlıca karşılaştırmak için iyi bir referanstır.
 Lume yerel çalışır; internet bağlantısı, telemetri veya analiz gönderimi kullanmaz.
 
-> **Not:** Aşağıdaki tarama görselleri **v1.1** sürümünün dosyalarına aittir; güncel sürümün taraması değildir.
-> İndirdiğiniz dosyayı kendiniz doğrulamak için aşağıdaki SHA-256 özetlerini kullanın.
+Aşağıdaki görseller **v2.2** sürümünün dosyalarına aittir. Her taramanın üstündeki
+SHA-256, release notunda yayımlanan özetle aynıdır; yani görselde gördüğünüz sonuç
+indirdiğiniz dosyanın sonucudur.
+
+| Dosya | Sonuç |
+|---|---|
+| `lume_go_cli.exe` | 45 motordan 1'i işaretledi |
+| `lume_go_gui.exe` | 69 motordan 3'ü işaretledi |
+| `lume_python_gui.exe` | 70 motordan 4'ü işaretledi |
+
+**Bu işaretlemeler neden çıkıyor?** Hepsi imza değil, makine öğrenmesi ve sezgisel
+tahmin sonuçları (`Wacatac.C!ml`, `Malicious.moderate.ml.score`, `Unsafe` gibi).
+Üç sebebi var: dosyalar kod imzalama sertifikasıyla imzalanmıyor, Go ikilileri
+statik derlendiği için sıkıştırılmış yazılıma benziyor, PyInstaller ise programı
+kendi kendini açan tek dosyaya paketlediği için "dropper" kalıbına uyuyor. Aynı
+sebeple ESET, Kaspersky, BitDefender, Avast, McAfee, Symantec ve diğer büyük
+motorların tamamı dosyaları temiz buluyor.
+
+> **Windows Defender uyarısı:** Go GUI için Microsoft `Trojan:Win32/Wacatac.C!ml`
+> etiketi veriyor. Bu, Windows'un varsayılan koruması olduğu için indirdiğinizde
+> dosya karantinaya alınabilir. Kaynak kod bu depoda açık; dilerseniz kendiniz
+> derleyip kullanabilirsiniz.
 
 ### Dosya doğrulama
 
@@ -215,8 +235,29 @@ I keep the scan screenshots here in one place.
 VirusTotal is not a complete security guarantee by itself, but it is a useful reference for comparing a downloaded file against multiple antivirus engines.
 Lume runs locally and does not require internet access, telemetry, or analytics.
 
-> **Note:** The scan screenshots below are from the **v1.1** binaries and do not reflect the current release.
-> To verify what you downloaded, compare its digest with the list published in that release's notes:
+The screenshots below are from the **v2.2** binaries. The SHA-256 shown at the top
+of each scan matches the digest published in the release notes, so what you see is
+the result for the file you download.
+
+| File | Result |
+|---|---|
+| `lume_go_cli.exe` | 1 of 45 engines flagged it |
+| `lume_go_gui.exe` | 3 of 69 engines flagged it |
+| `lume_python_gui.exe` | 4 of 70 engines flagged it |
+
+**Why these flags appear.** None of them are signature matches; they are machine
+learning and heuristic guesses (`Wacatac.C!ml`, `Malicious.moderate.ml.score`,
+`Unsafe`). Three reasons: the files are not signed with a code signing
+certificate, Go binaries are statically linked and therefore resemble packed
+executables, and PyInstaller bundles the program into a self-extracting single
+file, which matches the "dropper" pattern. For the same reason ESET, Kaspersky,
+BitDefender, Avast, McAfee, Symantec and the other major engines all report the
+files as clean.
+
+> **Windows Defender note:** Microsoft labels the Go GUI as
+> `Trojan:Win32/Wacatac.C!ml`. Since Defender ships with Windows, the file may be
+> quarantined on download. The source is in this repository, so you can build it
+> yourself if you prefer.
 >
 > ```powershell
 > Get-FileHash .\lume_go_gui.exe -Algorithm SHA256
