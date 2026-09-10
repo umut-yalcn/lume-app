@@ -10,6 +10,10 @@ set -euo pipefail
 etiket="${1:?etiket adi gerekli}"
 cikti="${2:?cikti dosyasi gerekli}"
 
+# UYARI: Etiket olustururken 'git tag -a --cleanup=verbatim' kullanin.
+# Varsayilan temizleme, mesajda '#' ile baslayan satirlari yorum sayip siler;
+# Markdown baslikari (## Yenilikler gibi) bu yuzden sessizce kaybolur ve
+# surum notu basliksiz yayimlanir.
 git fetch --force --tags origin "refs/tags/${etiket}:refs/tags/${etiket}"
 git tag -l --format='%(contents:body)' "${etiket}" > "${cikti}"
 
