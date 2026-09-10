@@ -19,26 +19,50 @@ Automatic folder organization with EXIF metadata, duplicate detection with MD5 (
 
 ## Screenshots
 
+**Python GUI** — koyu tema, açık tema ve Türkçe arayüz
+
 <p align="center">
-    <img src="screenshots/lume python version window main dark en.png" alt="1" width="300" style="margin-right: 10px;"/> 
-    <img src="screenshots/lume python version window main light en.png" alt="3" width="300"/>
-    <img src="screenshots/lume python version dpi sharp tr.png" alt="Python GUI DPI sharp Turkish screenshot" width="300"/>
-    <img src="screenshots/lume go version light tr.png" alt="3" width="300"/>
-    <img src="screenshots/lume go version light en.png" alt="4" width="300"/>
-    <img src="screenshots/listed folders month.png" alt="5" width="300"/>
-    <img src="screenshots/lume cli version powershell.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell success.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell simulation.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell help.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell warning.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell dryrun.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell exif dryrun.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell rename dryrun.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell full dryrun.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell error same.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell error nested.png" alt="2" width="300"/>
-    <img src="screenshots/lume cli version powershell error source inside target.png" alt="2" width="300"/>
+    <img src="screenshots/lume python version window main dark en.png" alt="Python GUI, koyu tema" width="300"/>
+    <img src="screenshots/lume python version window main light en.png" alt="Python GUI, açık tema" width="300"/>
+    <img src="screenshots/lume python version dpi sharp tr.png" alt="Python GUI, Türkçe arayüz" width="300"/>
 </p>
+
+**Go GUI** — Türkçe ve İngilizce
+
+<p align="center">
+    <img src="screenshots/lume go version light tr.png" alt="Go GUI, Türkçe" width="420"/>
+    <img src="screenshots/lume go version light en.png" alt="Go GUI, İngilizce" width="420"/>
+</p>
+
+**Go CLI** — arşivleme, simülasyon ve yol doğrulama
+
+<p align="center">
+    <img src="screenshots/lume cli version powershell success.png" alt="CLI, arşivleme tamamlandı" width="420"/>
+    <img src="screenshots/lume cli version powershell full dryrun.png" alt="CLI, --exif --rename ile simülasyon" width="420"/>
+    <img src="screenshots/lume cli version powershell help.png" alt="CLI, yardım metni" width="420"/>
+    <img src="screenshots/lume cli version powershell error nested.png" alt="CLI, hedef kaynağın içinde hatası" width="420"/>
+</p>
+
+**Sonuç** — tarihe göre oluşan arşiv yapısı
+
+<p align="center">
+    <img src="screenshots/listed folders month.png" alt="Arşivin yıl/ay/gün klasör yapısı" width="640"/>
+</p>
+
+<details>
+<summary>Diğer CLI ekran görüntüleri</summary>
+
+<p align="center">
+    <img src="screenshots/lume cli version powershell.png" alt="CLI, kaynak klasördeki dosyalar" width="420"/>
+    <img src="screenshots/lume cli version powershell dryrun.png" alt="CLI, --dry-run" width="420"/>
+    <img src="screenshots/lume cli version powershell exif dryrun.png" alt="CLI, --exif --dry-run" width="420"/>
+    <img src="screenshots/lume cli version powershell rename dryrun.png" alt="CLI, --rename --dry-run" width="420"/>
+    <img src="screenshots/lume cli version powershell warning.png" alt="CLI, bilinmeyen seçenek uyarısı" width="420"/>
+    <img src="screenshots/lume cli version powershell error same.png" alt="CLI, kaynak ve hedef aynı hatası" width="420"/>
+    <img src="screenshots/lume cli version powershell error source inside target.png" alt="CLI, kaynak hedefin içinde hatası" width="420"/>
+</p>
+
+</details>
 
 ---
 
