@@ -166,18 +166,37 @@ def archive_file(file_info: Dict, target_base: str) -> bool:
             logger.error(f"Integrity hash unavailable for {filename}; source preserved")
             return False
 
-        shutil.copy2(long_path(source), long_path(final_target))
+        # Once gecici bir dosyaya yazilir, dogrulandiktan sonra tasinir.
+        # Dogrudan hedefe yazmak, islem yarida kesilirse (surec kapatilir,
+        # elektrik gider) arsivde yarim dosya birakirdi.
+        temp_target = final_target + ".lume-part"
+        try:
+            os.remove(long_path(temp_target))
+        except OSError:
+            pass
 
-        target_hash = get_file_hash(final_target, quick=False)
+        shutil.copy2(long_path(source), long_path(temp_target))
+
+        target_hash = get_file_hash(temp_target, quick=False)
 
         if target_hash != source_hash:
             logger.error(f"Integrity check FAILED for {filename}! Removing corrupt copy...")
 
             try:
-                os.remove(final_target)
+                os.remove(long_path(temp_target))
                 logger.info(f"Corrupt copy removed, source preserved: {filename}")
             except Exception as remove_err:
                 logger.critical(f"CRITICAL: Failed to remove corrupt copy: {remove_err}")
+            return False
+
+        try:
+            os.replace(long_path(temp_target), long_path(final_target))
+        except OSError as move_err:
+            logger.error(f"Could not publish copy for {filename}: {move_err}")
+            try:
+                os.remove(long_path(temp_target))
+            except OSError:
+                pass
             return False
 
         rel_path = os.path.relpath(final_target, target_base)

@@ -122,6 +122,18 @@ class ArchiveFileTest(unittest.TestCase):
         self.assertIn("IMG_004.jpg", names)
         self.assertIn("IMG_004_1.jpg", names)
 
+    def test_no_partial_file_remains_after_archive(self):
+        path = self._write("IMG_010.jpg", b"tamamlanmis kopya")
+        self.assertTrue(archive_file(get_file_info(path), self.dst))
+
+        artik = [
+            os.path.join(kok, ad)
+            for kok, _, adlar in os.walk(self.dst)
+            for ad in adlar
+            if ad.endswith(".lume-part")
+        ]
+        self.assertEqual(artik, [], "yarım kopya dosyası hedefte kaldı")
+
     def test_missing_source_is_reported(self):
         info = get_file_info(self._write("IMG_005.jpg", b"gecici"))
         os.remove(info["path"])
