@@ -21,7 +21,7 @@ import (
 	"github.com/lxn/win"
 )
 
-var AppVersion = "2.1"
+var AppVersion = "2.3"
 
 var appTitle = "Lume v" + AppVersion
 
