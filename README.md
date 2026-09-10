@@ -171,21 +171,21 @@ Lume yerel çalışır; internet bağlantısı, telemetri veya analiz gönderimi
 > **Not:** Aşağıdaki tarama görselleri **v1.1** sürümünün dosyalarına aittir; güncel sürümün taraması değildir.
 > İndirdiğiniz dosyayı kendiniz doğrulamak için aşağıdaki SHA-256 özetlerini kullanın.
 
-### v2.2 dosya özetleri (SHA-256)
+### Dosya doğrulama
 
-| Dosya | SHA-256 |
-|---|---|
-| `lume_python_gui.exe` | `03d30ac0048dd7cc7f0de237f2cfac4b4834a74091b385d0090e5ef1f3bcc435` |
-| `lume_go_gui.exe` | `5323fa5ed81454322f2029e4def629f2ca12cc6f69ff35ecf60d9b16880b7414` |
-| `lume_go_cli.exe` | `4e2f5536a1a4852a04cb3d7f404e2a2dab9e613fa2e80ca670c817542b65e10c` |
+Her sürümün SHA-256 özetleri, o sürümün **release sayfasında** yayımlanır.
+İkili dosyalar her yayında yeniden derlendiği ve derleme zaman damgası içerdiği
+için özetler sürümden sürüme değişir; bu yüzden burada sabit bir liste tutulmaz.
 
-İndirdiğiniz dosyanın özetini PowerShell ile alın ve yukarıdakiyle karşılaştırın:
+İndirdiğiniz dosyanın özetini alın:
 
 ```powershell
-Get-FileHash .\lume_go_gui.exe -Algorithm SHA256
+Get-FileHash .\lume_go_cli.exe -Algorithm SHA256
 ```
 
-Aynı özeti VirusTotal'ın arama kutusuna yapıştırarak, dosyayı yüklemeden güncel tarama sonucuna bakabilirsiniz.
+Çıkan değeri indirdiğiniz sürümün release notundaki listeyle karşılaştırın.
+Aynı değeri VirusTotal'ın arama kutusuna yapıştırarak, dosyayı yüklemeden
+güncel tarama sonucuna da bakabilirsiniz.
 
 ## VirusTotal Verification
 
@@ -196,7 +196,7 @@ VirusTotal is not a complete security guarantee by itself, but it is a useful re
 Lume runs locally and does not require internet access, telemetry, or analytics.
 
 > **Note:** The scan screenshots below are from the **v1.1** binaries and do not reflect the current release.
-> To verify what you downloaded, use the SHA-256 digests above (`v2.2 dosya özetleri`) and compare them with:
+> To verify what you downloaded, compare its digest with the list published in that release's notes:
 >
 > ```powershell
 > Get-FileHash .\lume_go_gui.exe -Algorithm SHA256
