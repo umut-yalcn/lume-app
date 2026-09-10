@@ -1,0 +1,36 @@
+# Metin dosyalari depoda LF ile saklanir; calisma kopyasinda platformun
+# kendi bicimine cevrilir. Bu dosya olmadan ayni dosya farkli makinelerde
+# farkli satir sonlariyla islenip gereksiz fark uretiyordu.
+* text=auto eol=lf
+
+# Kaynak ve dokuman
+*.go      text eol=lf
+*.py      text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.json    text eol=lf
+*.sum     text eol=lf
+*.mod     text eol=lf
+
+# Kabuk betikleri CI'de bash ile calisiyor: CRLF onlari bozar
+*.sh      text eol=lf
+
+# Windows'a ozgu metin dosyalari CRLF bekler
+*.manifest text eol=crlf
+*.bat     text eol=crlf
+*.ps1     text eol=crlf
+
+# Ikili dosyalar hicbir donusume ugramaz
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.syso    binary
+*.exe     binary
+*.pdf     binary
+*.zip     binary
+
+# GitHub dil istatistiklerinde ekran goruntuleri sayilmasin
+screenshots/** linguist-documentation
