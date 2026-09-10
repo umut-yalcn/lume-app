@@ -137,9 +137,19 @@ Files and screenshots for each version are available in detail in this repositor
 
 ## Veri Depolama
 
-- `lume_config.json` - GUI sürümlerinde yerel ayarlar 
+Her iki GUI sürümü de ayarlarını ve işlem kaydını yerelde tutar; dosya adları ve
+konumları sürüme göre değişir.
 
-- `lume_app.log` - GUI sürümlerinde yerel işlem loglanması
+| Sürüm | Ayarlar | İşlem kaydı | Konum |
+|---|---|---|---|
+| Go GUI | `lume_config.json` | `lume_app.log` | Uygulamanın yanındaki klasör; yazılamıyorsa `%APPDATA%\Lume` |
+| Python GUI | `config.json` | `app.log` | `%APPDATA%\Lume` |
+
+Go CLI sürümü hiçbir ayar veya kayıt dosyası oluşturmaz.
+
+İşlem kaydı sınırsız büyümez: Go GUI 5 MB'ı aşınca döndürür ve önceki kaydı
+`.old` uzantısıyla saklar; Python GUI 10 MB'ı aşınca döndürür ve son beş kaydı
+tutar.
 
 ---
 
@@ -154,9 +164,19 @@ Files and screenshots for each version are available in detail in this repositor
 
 ## Data Storage
 
-- `lume_config.json` - Local settings for GUI versions 
-  
-- `lume_app.log` - Local operation log for GUI versions
+Both GUI versions keep their settings and operation log locally. File names and
+locations differ per version.
+
+| Version | Settings | Log | Location |
+|---|---|---|---|
+| Go GUI | `lume_config.json` | `lume_app.log` | Next to the executable; falls back to `%APPDATA%\Lume` if not writable |
+| Python GUI | `config.json` | `app.log` | `%APPDATA%\Lume` |
+
+The Go CLI version creates no settings or log files.
+
+Logs do not grow without bound: the Go GUI rotates past 5 MB and keeps the
+previous log with an `.old` suffix; the Python GUI rotates past 10 MB and keeps
+the last five logs.
 
 ---
 
