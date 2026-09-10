@@ -113,21 +113,14 @@ jobs:
               });
             }
 
-      - name: Extract release notes from tag
-        id: notes
+      - name: Build release notes
         shell: bash
-        run: |
-          git fetch --force --tags origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
-          {
-            echo "body<<LUME_RELEASE_NOTES"
-            git tag -l --format='%(contents:body)' "${GITHUB_REF_NAME}"
-            echo "LUME_RELEASE_NOTES"
-          } >> "$GITHUB_OUTPUT"
+        run: bash .github/scripts/release-notes.sh "$GITHUB_REF_NAME" release_notes.md
 
       - name: Upload Binaries to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          body: ${{ steps.notes.outputs.body }}
+          body_path: release_notes.md
           files: |
             python version lume/dist/lume_python_gui.exe
             go version lume/lume_go_gui.exe
